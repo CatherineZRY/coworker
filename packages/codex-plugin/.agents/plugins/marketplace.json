@@ -1,0 +1,20 @@
+{
+  "name": "coworker-local",
+  "interface": {
+    "displayName": "coworker (local)"
+  },
+  "plugins": [
+    {
+      "name": "coworker",
+      "source": {
+        "source": "local",
+        "path": "./plugins/coworker"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

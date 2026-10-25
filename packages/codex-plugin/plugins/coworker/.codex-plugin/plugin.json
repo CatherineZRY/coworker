@@ -1,0 +1,26 @@
+{
+  "name": "coworker",
+  "version": "0.1.0",
+  "description": "Delegate coding tasks from Codex to Claude Code, Codex workers, or Cursor and supervise them on a local kanban board with review and rework loops.",
+  "author": {
+    "name": "coworker"
+  },
+  "license": "MIT",
+  "keywords": ["orchestration", "kanban", "workers", "claude-code", "cursor", "review"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "coworker",
+    "shortDescription": "Delegate coding work to other agents and track it on a local board",
+    "longDescription": "coworker keeps Codex as the main agent. Use it to dispatch implementation work to Claude Code, Codex, or Cursor workers, watch progress on a per-session kanban board, inspect the resulting diff, and send tasks back for fixes with review comments.",
+    "developerName": "coworker",
+    "category": "Coding",
+    "capabilities": ["Read", "Write", "Interactive"],
+    "websiteURL": "https://github.com/",
+    "defaultPrompt": [
+      "Dispatch this implementation to a worker and review the result when it finishes."
+    ],
+    "brandColor": "#0F172A",
+    "screenshots": []
+  }
+}
