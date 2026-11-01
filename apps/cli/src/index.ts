@@ -12,7 +12,7 @@ import {
   readToken,
   writeDefaultConfig,
 } from "@coworker/adapters";
-import { daemonStatus, startDaemon } from "@coworker/daemon";
+import { daemonStatus, repairSessionBoard, startDaemon } from "@coworker/daemon";
 import { Command } from "commander";
 import { openBrowser } from "./browser.js";
 import { runDoctor } from "./doctor.js";
@@ -210,6 +210,23 @@ program
       console.log(`${check.ok ? "✓" : "✗"} ${check.name}: ${check.detail}`);
     }
     if (!report.ok) process.exitCode = 1;
+  });
+
+program
+  .command("repair-session-board <boardId> <threadId>")
+  .description("Rebind an internal board to a primary session without restarting workers")
+  .option("--pin-title", "pin the display name while a legacy daemon is still running")
+  .option("--home <dir>", "coworker home directory")
+  .action(async (boardId, threadId, options) => {
+    const { board, backupPath } = await repairSessionBoard({
+      home: options.home,
+      boardId,
+      targetThreadId: threadId,
+      pinTitle: options.pinTitle,
+    });
+    console.log(`Repaired board ${board.id}: ${board.title}`);
+    console.log(`SQLite backup: ${backupPath}`);
+    console.log("Task/run/event IDs and worktrees were preserved; daemon was not restarted.");
   });
 
 program

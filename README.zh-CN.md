@@ -222,6 +222,9 @@ Skill 提供操作指引，**仍然需要注册 MCP** 才能控制看板。
 - **找不到命令**：检查 `command -v coworker`、链接与 PATH；zsh 中可执行 `rehash`。
   `apps/cli/dist/index.js` 必须已构建且仍在原位置。
 - **看板提示未授权**：使用 `coworker open` 打开带认证信息的地址。
+- **会话名不一致或显示 Guardian review**：新版优先读取主会话显示名称，并排除内部会话。
+  已有错误关联可按 [安全修复步骤](docs/operations.md#repairing-a-board-attached-to-an-internal-session)
+  重新绑定看板；Worker 执行中不要重启服务。
 - **Codex 看不到工具**：重跑 `coworker install`，重启 Codex，检查插件和 MCP；
   必要时采用上面的单独安装技能方式。
 - **Worker 不可用**：安装并登录对应 CLI；`doctor` 检查命令是否可用，不保证认证成功。

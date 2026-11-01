@@ -77,3 +77,36 @@ describe("Codex session resolution", () => {
     expect(a.boardId).not.toBe(b.boardId);
   });
 });
+
+describe("primary session identity", () => {
+  function internal(id: string, cwd: string, source = '{"subagent":{"other":"guardian"}}') {
+    seedThread(id, cwd, "Guardian review");
+    const thread = core.threads.get(id);
+    if (!thread) throw new Error("Missing fixture");
+    core.threads.upsert({ ...thread, source, updatedAt: Date.now() + 60_000 });
+  }
+  it("ignores newer internal sessions in cwd fallback", () => {
+    seedThread("main", "/project", "Kitchen");
+    internal("guardian", "/project");
+    expect(resolveSession(core, { cwd: "/project" }).threadId).toBe("main");
+  });
+  it("resolves an internal identity to its unique primary session", () => {
+    seedThread("main", "/project", "Kitchen");
+    internal("guardian", "/project");
+    expect(resolveSession(core, { threadId: "guardian", cwd: "/project" }).threadId).toBe("main");
+  });
+  it("refuses to guess between primary sessions in the same directory", () => {
+    seedThread("one", "/project");
+    seedThread("two", "/project");
+    expect(() => resolveSession(core, { cwd: "/project" })).toThrow(/multiple.*sessions/i);
+    expect(resolveSession(core, { threadId: "one", cwd: "/project" }).threadId).toBe("one");
+  });
+  it("does not expose internal and exec boards as local boards", () => {
+    seedThread("main", "/project", "Kitchen");
+    internal("guardian", "/project");
+    internal("worker", "/worktree", "exec");
+    for (const id of ["main", "guardian", "worker"]) core.boards.ensureForThread(id);
+    expect(core.boardService.sessions().map((s) => s.thread.id)).toEqual(["main"]);
+    expect(core.boardService.listBoards().map((b) => b.codexThreadId)).toEqual(["main"]);
+  });
+});

@@ -48,6 +48,7 @@ export function readCodexThreads(file: string): CodexThreadSnapshot[] {
     const select = [
       "id",
       pick("title", "NULL"),
+      pick("name", "NULL"),
       pick("first_user_message", "NULL"),
       "cwd",
       pick("git_branch", "NULL"),
@@ -59,6 +60,7 @@ export function readCodexThreads(file: string): CodexThreadSnapshot[] {
     const rows = db.prepare(`SELECT ${select} FROM threads`).all() as Array<{
       id: string;
       title: string | null;
+      name: string | null;
       first_user_message: string | null;
       cwd: string | null;
       git_branch: string | null;
@@ -71,7 +73,7 @@ export function readCodexThreads(file: string): CodexThreadSnapshot[] {
       .filter((row) => typeof row.id === "string" && row.id.length > 0 && row.cwd)
       .map((row) => ({
         id: row.id,
-        title: normalizeString(row.title),
+        title: normalizeString(row.name) ?? normalizeString(row.title),
         firstUserMessage: normalizeString(row.first_user_message),
         cwd: row.cwd as string,
         gitBranch: normalizeString(row.git_branch),

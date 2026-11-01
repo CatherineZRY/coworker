@@ -202,6 +202,7 @@ function removeIfOwned(file: string): void {
 
 export type { Logger } from "./logger.js";
 export { createLogger } from "./logger.js";
+export { repairSessionBoard } from "./repair.js";
 export { Scheduler } from "./scheduler.js";
 export { buildServer } from "./server.js";
 export { resolveSession, syncCodexThreads } from "./sync.js";

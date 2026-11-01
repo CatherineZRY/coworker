@@ -1,4 +1,9 @@
-import type { Board, BoardSnapshot, SessionSummary } from "@coworker/shared";
+import {
+  type Board,
+  type BoardSnapshot,
+  isInternalCodexSource,
+  type SessionSummary,
+} from "@coworker/shared";
 import type { BoardRepository } from "../repositories/board-repository.js";
 import type { RunRepository } from "../repositories/run-repository.js";
 import type { TaskRepository } from "../repositories/task-repository.js";
@@ -31,7 +36,9 @@ export class BoardService {
   }
 
   sessions(includeArchived = false): SessionSummary[] {
-    const threads = this.deps.threads.list(includeArchived);
+    const threads = this.deps.threads
+      .list(includeArchived)
+      .filter((thread) => !isInternalCodexSource(thread.source));
     return threads.map((thread) => {
       const board = this.deps.boards.ensureForThread(thread.id);
       const tasks = this.deps.tasks.listByBoard(board.id);
@@ -46,7 +53,17 @@ export class BoardService {
   }
 
   listBoards(): Board[] {
-    return this.deps.boards.list();
+    return this.deps.boards
+      .list()
+      .filter(
+        (board) =>
+          !board.codexThreadId ||
+          !isInternalCodexSource(this.deps.threads.get(board.codexThreadId)?.source),
+      );
+  }
+
+  reassociate(boardId: string, targetThreadId: string, pinTitle = false): Board {
+    return this.deps.boards.reassociateToPrimary(boardId, targetThreadId, pinTitle);
   }
 
   rename(boardId: string, title: string | null): Board | null {

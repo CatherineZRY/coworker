@@ -1,4 +1,5 @@
 import type { AgentId, RunEvent } from "@coworker/shared";
+import { isInternalCodexSource } from "@coworker/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
@@ -24,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { ApiError, api, eventStreamUrl } from "@/lib/api";
 import type { Notify, NotifyKind } from "@/lib/types";
 import { cn, formatTime } from "@/lib/utils";
+import { selectSessionBoard } from "./lib/session-selection.js";
 
 type LiveState = "connecting" | "live" | "offline";
 
@@ -66,25 +68,34 @@ export function App() {
     refetchInterval: 15_000,
   });
 
+  const allSessions = sessionsQuery.data?.sessions ?? [];
   const sessions = useMemo(
     () =>
-      [...(sessionsQuery.data?.sessions ?? [])].sort(
-        (a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0),
-      ),
+      [...(sessionsQuery.data?.sessions ?? [])]
+        .filter((session) => !isInternalCodexSource(session.thread.source))
+        .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0)),
     [sessionsQuery.data],
   );
-  const boards = sessionsQuery.data?.boards ?? [];
+  const hiddenThreadIds = new Set(
+    allSessions
+      .filter((session) => isInternalCodexSource(session.thread.source))
+      .map((session) => session.thread.id),
+  );
+  const boards = (sessionsQuery.data?.boards ?? []).filter(
+    (board) => !board.codexThreadId || !hiddenThreadIds.has(board.codexThreadId),
+  );
 
   useEffect(() => {
     if (!sessionsQuery.data) return;
-    const exists = boards.some((board) => board.id === selectedBoardId);
-    if (exists) return;
-    const preferred =
-      sessions.find((session) => !session.thread.archived)?.boardId ??
-      sessions[0]?.boardId ??
-      sessionsQuery.data.defaultBoard.id;
+    const preferred = selectSessionBoard(
+      selectedBoardId,
+      allSessions.map((session) => ({ boardId: session.boardId, source: session.thread.source })),
+      boards.map((board) => board.id),
+      sessionsQuery.data.defaultBoard.id,
+    );
+    if (preferred === selectedBoardId) return;
     setSelectedBoardId(preferred);
-  }, [sessionsQuery.data, boards, sessions, selectedBoardId, setSelectedBoardId]);
+  }, [sessionsQuery.data, allSessions, boards, selectedBoardId, setSelectedBoardId]);
 
   const boardQuery = useQuery({
     queryKey: ["board", selectedBoardId],

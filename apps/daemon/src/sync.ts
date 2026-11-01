@@ -1,6 +1,7 @@
 import path from "node:path";
 import { readAllCodexThreads } from "@coworker/adapters";
 import type { Core } from "@coworker/core";
+import { isInternalCodexSource } from "@coworker/shared";
 
 let lastSyncAt = 0;
 
@@ -56,7 +57,11 @@ export function resolveSession(core: Core, input: ResolveSessionInput): SessionC
     input.threadId ?? (input.ppid ? core.sessions.get(input.ppid)?.codexThreadId : null) ?? null;
   const mappedCwd = input.cwd ?? (input.ppid ? core.sessions.get(input.ppid)?.cwd : null) ?? null;
 
-  const threadId = mappedThreadId ?? findThreadIdByCwd(core, mappedCwd);
+  const mappedThread = mappedThreadId ? core.threads.get(mappedThreadId) : null;
+  const threadId =
+    mappedThread && isInternalCodexSource(mappedThread.source)
+      ? findThreadIdByCwd(core, mappedThread.cwd)
+      : (mappedThreadId ?? findThreadIdByCwd(core, mappedCwd));
   if (threadId) {
     const thread = core.threads.get(threadId) ?? ensureThread(core, threadId, mappedCwd);
     if (thread) {
@@ -92,18 +97,17 @@ function findThreadIdByCwd(core: Core, cwd: string | null): string | null {
   if (!cwd) return null;
   const normalized = path.resolve(cwd);
   const threads = core.threads.list(false);
-  let best: { id: string; score: number; updatedAt: number } | null = null;
-  for (const thread of threads) {
-    if (!thread.cwd) continue;
+  const candidates = threads.filter((thread) => {
+    if (!thread.cwd || isInternalCodexSource(thread.source)) return false;
     const threadCwd = path.resolve(thread.cwd);
-    let score = 0;
-    if (threadCwd === normalized) score = 2;
-    else if (normalized.startsWith(`${threadCwd}${path.sep}`)) score = 1;
-    if (score === 0) continue;
-    const updatedAt = thread.updatedAt ?? 0;
-    if (!best || score > best.score || (score === best.score && updatedAt > best.updatedAt)) {
-      best = { id: thread.id, score, updatedAt };
-    }
+    return normalized === threadCwd || normalized.startsWith(`${threadCwd}${path.sep}`);
+  });
+  const specificity = Math.max(0, ...candidates.map((thread) => path.resolve(thread.cwd).length));
+  const matches = candidates.filter((thread) => path.resolve(thread.cwd).length === specificity);
+  if (matches.length > 1) {
+    throw new Error(
+      "Multiple Codex sessions match this directory. Select a session board explicitly with list_sessions and boardId.",
+    );
   }
-  return best?.id ?? null;
+  return matches[0]?.id ?? null;
 }

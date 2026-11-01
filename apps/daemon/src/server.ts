@@ -6,6 +6,7 @@ import {
   createTaskSchema,
   dispatchTaskSchema,
   type EventType,
+  isInternalCodexSource,
   patchTaskSchema,
   type Run,
   requestChangesSchema,
@@ -162,8 +163,22 @@ export async function buildServer(deps: ServerDeps): Promise<FastifyInstance> {
     return { tasks: redactSnapshot(core.taskService.snapshot(params.id)).tasks };
   });
 
+  // Old MCP clients may cache a board ID for 30 seconds across a repair.
+  const requireUserBoard = (boardId: string | undefined) => {
+    if (!boardId) return;
+    const board = core.boards.get(boardId);
+    const source = board?.codexThreadId ? core.threads.get(board.codexThreadId)?.source : null;
+    if (isInternalCodexSource(source)) {
+      throw new HttpError(
+        409,
+        "This is an internal session board. Refresh sessions and select the primary session board before dispatching.",
+      );
+    }
+  };
+
   app.post("/api/tasks", async (request, reply) => {
     const input = createTaskSchema.parse(request.body);
+    requireUserBoard(input.boardId);
     const task = core.taskService.create({
       boardId: input.boardId,
       title: input.title,
@@ -204,6 +219,7 @@ export async function buildServer(deps: ServerDeps): Promise<FastifyInstance> {
 
   app.post("/api/dispatch", async (request, reply) => {
     const input = dispatchTaskSchema.parse(request.body);
+    requireUserBoard(input.boardId);
     const result = core.taskService.dispatch(input);
     const task = core.tasks.get(result.taskId);
     reply.code(202);

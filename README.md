@@ -238,6 +238,10 @@ that board has no repository cwd. It applies as a shared fallback, not per task.
 - **Command not found:** check `command -v coworker`, the link, and PATH; in zsh,
   run `rehash`. The build must exist at `apps/cli/dist/index.js`.
 - **Board says unauthorized:** use `coworker open` to get the authenticated URL.
+- **Wrong session name or Guardian review board:** current versions prefer the primary
+  session display name and exclude internal sessions. For older stored board
+  associations, see [safe board repair](docs/operations.md#repairing-a-board-attached-to-an-internal-session).
+  Do not restart the daemon while workers are active.
 - **No coworker tools in Codex:** rerun `coworker install`, restart Codex, and
   check plugin/MCP availability. Use the separate-skill fallback above if needed.
 - **Worker unavailable:** install and log into that CLI; `doctor` checks command

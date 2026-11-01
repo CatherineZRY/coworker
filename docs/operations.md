@@ -139,3 +139,40 @@ pnpm lint
 The suites use in-memory SQLite and temporary git repositories. They do not
 touch `~/.coworker` or `~/.codex`; `CODEX_HOME` is redirected to a temp
 directory.
+
+## Repairing a board attached to an internal session
+
+Current discovery prefers Codex's `name` column over the original `title`, and
+excludes internal subagent / non-interactive exec sessions from session picking.
+When several primary sessions share a directory, directory-only resolution
+refuses to guess: use `list_sessions` and pass the desired `boardId` explicitly.
+
+For an existing task board incorrectly owned by an internal session, identify
+its board ID and the intended primary Codex thread ID, then run:
+
+```bash
+coworker repair-session-board <boardId> <primaryThreadId>
+```
+
+This maintenance command opens a separate SQLite connection and makes a backup
+at `coworker.db.session-repair-<timestamp>.backup`. It rebinds the existing board
+in one transaction, preserving board, task, run and event IDs, wait cursors,
+worker processes, statuses and worktrees. If the primary session already has an
+empty board, the two board owners are swapped. A populated primary board or a
+different repository directory is refused; choose a deliberate consolidation
+plan instead of deleting or moving tasks blindly.
+
+By default the repaired board follows the primary session name and retains any
+existing primary-board title override. If repairing before upgrading a still-running
+legacy daemon, add `--pin-title` to pin the display name so old sync cannot replace
+it with an original prompt. After upgrading, clear that temporary override via the
+board rename control (empty title) to follow future Codex renames automatically. No live
+workers are stopped or relaunched by this command.
+
+Building updates the files, but an existing daemon keeps its loaded backend
+code. **Do not restart while runs are queued, starting, or running**: startup
+recovery terminates old workers and marks their runs failed. Wait for a quiet
+point, prevent new dispatches during the restart, then stop/start the daemon and
+restart the Codex MCP client to load new session-routing code. Refresh the board
+to load updated web assets. Until backend/MCP reload, explicitly target the
+repaired board ID rather than relying on legacy automatic session resolution.

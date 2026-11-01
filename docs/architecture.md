@@ -45,11 +45,17 @@ settings        (default board id)
 1. `CODEX_THREAD_ID` / `CODEX_SESSION_ID` passed by the MCP client.
 2. A hook row keyed by parent process id (`agent_sessions.ppid`).
 3. The working directory: exact match first, then the nearest containing thread
-   directory, preferring the most recently updated thread.
+   directory, requiring a unique primary session at the most specific matching directory.
+   Multiple matching primary sessions require an explicit board selection.
 4. The default local board.
 
+Internal subagent and non-interactive exec sessions are excluded from automatic
+selection and the visible board picker. An explicitly supplied internal thread
+can resolve only to a unique primary session in its directory.
+
 Threads are synced from `~/.codex/state_*.sqlite` (read-only, tolerant of schema
-drift). A board title is the manual override, then the Codex thread title, then
+drift). A board title is the manual override, then the Codex display name (`name`,
+falling back to `title` for older state schemas), then
 the first line of the thread's first user message, then `Local board`.
 
 Hooks (`SessionStart`, `Stop`, `SessionEnd`) post to `/api/hooks/codex` and fail
